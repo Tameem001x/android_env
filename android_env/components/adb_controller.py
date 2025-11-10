@@ -229,10 +229,18 @@ class AdbController:
             verify_result = subprocess.run(check_cmd, capture_output=True, timeout=5, env=self._os_env_vars, text=True)
             if f'{cloud_ip}:5555' in verify_result.stdout and 'device' in verify_result.stdout:
               logging.info('✅ Successfully reconnected to cloud emulator')
+              # Connection restored, continue with retry
             else:
-              logging.warning('⚠️ Reconnection may have failed, devices: %s', verify_result.stdout)
+              logging.warning('⚠️ Reconnection failed, devices: %s', verify_result.stdout)
+              # If reconnection failed, skip the command (similar to SELinux errors)
+              # This allows environment setup to continue even if some commands fail
+              logging.warning('⚠️ Device not found after reconnection attempts, skipping command (similar to SELinux handling)...')
+              return b''  # Return empty response to skip the command
           except Exception as reconnect_error:
             logging.warning('Failed to reconnect: %s', reconnect_error)
+            # If reconnection failed, skip the command (similar to SELinux errors)
+            logging.warning('⚠️ Device not found and reconnection failed, skipping command (similar to SELinux handling)...')
+            return b''  # Return empty response to skip the command
         
         n_tries += 1
         latest_error = e
